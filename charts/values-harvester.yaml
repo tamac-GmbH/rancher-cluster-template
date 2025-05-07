@@ -16,6 +16,8 @@ harvester:
   cilium:
     bgpControlPlaneEnabled: true
     hubbleEnabled: true
+    nodeIPAMEnabled: true
+    defaultLBServiceIPAM: none
   disableKubeProxy: true
   harvesterCredential: ABCDE...
     

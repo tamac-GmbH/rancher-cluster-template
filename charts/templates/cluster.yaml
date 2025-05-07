@@ -45,8 +45,16 @@ spec:
         bgpControlPlane:
          enabled: true
         {{- end }}
+        {{- if .Values.harvester.cilium.nodeIPAMEnabled }}
+        nodeIPAM:
+         enabled: true
+        {{- end }}
+
+        {{- if .Values.harvester.cilium.defaultLBServiceIPAM }}
         # do not handle services without recognized annotation
-        defaultLBServiceIPAM: none
+        defaultLBServiceIPAM: {{ .Values.harvester.cilium.defaultLBServiceIPAM }}
+        {{- end }}
+
         {{- if .Values.harvester.cilium.hubbleEnabled }}
         hubble:
          enabled: true
