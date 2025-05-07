@@ -2,6 +2,24 @@ cloudprovider: harvester
 
 cloudCredentialSecretName: harvester
 
+# moved from nodepool to have single settings per cluster
+harvester:
+  networkName: default/my-network
+  imageName: default/image-12345
+  vmNamespace: default
+  sshUser: ubuntu
+  userData: |-
+    #cloud-config
+    # whatever comes here...
+  cni: cilium
+  enableNetworkPolicy: true
+  cilium:
+    bgpControlPlaneEnabled: true
+    hubbleEnabled: true
+  disableKubeProxy: true
+  harvesterCredential: ABCDE...
+    
+
 # Specify nodepool options. Can add multiple node groups, specify etcd, controlplane and worker roles.
 nodepools:
 - etcd: true
@@ -65,7 +83,3 @@ nodepools:
   diskBus: virtio
   cpuCount: 4
   memorySize: 8
-  networkName: default/network-name-1
-  imageName: default/image-rand
-  vmNamespace: default
-  sshUser: ubuntu

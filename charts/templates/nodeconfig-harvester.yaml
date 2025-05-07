@@ -3,16 +3,24 @@
 apiVersion: rke-machine-config.cattle.io/v1
 kind: HarvesterConfig
 metadata:
-  name: {{ $nodepool.name }}
+  name: {{ printf "%s-%s" $.Values.cluster.name $nodepool.name }}
   namespace: fleet-default
 diskSize: {{ $nodepool.diskSize | quote }}
 diskBus: {{ $nodepool.diskBus }}
 cpuCount: {{ $nodepool.cpuCount | quote }}
 memorySize: {{ $nodepool.memorySize | quote }}
-networkName: {{ $nodepool.networkName }}
-imageName: {{ $nodepool.imageName }}
-vmNamespace: {{ $nodepool.vmNamespace }}
-sshUser: {{ $nodepool.sshUser }}
+networkName: {{ $.Values.harvester.networkName }}
+imageName: {{ $.Values.harvester.imageName }}
+vmNamespace: {{ $.Values.harvester.vmNamespace }}
+sshUser: {{ $.Values.harvester.sshUser }}
+{{- if $.Values.harvester.userData }}
+userData: >-
+  {{ $.Values.harvester.userData | b64enc }}
+{{- end }}
+{{- if $nodepool.vgpuProfile }}
+vgpuInfo: >-
+  {"vGPURequests":[{"name":"provisioned","deviceName":"nvidia.com/{{ $nodepool.vgpuProfile }}"}]}
+{{- end }}
 ---
 {{- end }}
 {{ $nodepool := .Values.nodepool }}
@@ -20,15 +28,23 @@ sshUser: {{ $nodepool.sshUser }}
 apiVersion: rke-machine-config.cattle.io/v1
 kind: HarvesterConfig
 metadata:
-  name: {{ $nodepool.name }}
+  name: {{ printf "%s-%s" $.Values.cluster.name $nodepool.name }}
   namespace: fleet-default
 diskSize: {{ $nodepool.diskSize | quote }}
 diskBus: {{ $nodepool.diskBus }}
 cpuCount: {{ $nodepool.cpuCount | quote }}
 memorySize: {{ $nodepool.memorySize | quote }}
-networkName: {{ $nodepool.networkName }}
-imageName: {{ $nodepool.imageName }}
-vmNamespace: {{ $nodepool.vmNamespace }}
-sshUser: {{ $nodepool.sshUser }}
+networkName: {{ $.Values.harvester.networkName }}
+imageName: {{ $.Values.harvester.imageName }}
+vmNamespace: {{ $.Values.harvester.vmNamespace }}
+sshUser: {{ $.Values.harvester.sshUser }}
+{{- if $.Values.harvester.userData }}
+userData: >-
+  {{ $.Values.harvester.userData | b64enc }}
+{{- end }}
+{{- if $nodepool.vgpuProfile }}
+vgpuInfo: >-
+  {"vGPURequests":[{"name":"provisioned","deviceName":"nvidia.com/{{ $nodepool.vgpuProfile }}"}]}
+{{- end }}
 {{- end }}
 {{- end }}

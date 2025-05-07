@@ -25,18 +25,55 @@ spec:
     caCerts: {{ .Values.localClusterAuthEndpoint.caCerts }}
   {{- end }}
   # enable network policy
-  enableNetworkPolicy: true
+  {{- if .Values.harvester.enableNetworkPolicy }}
+  enableNetworkPolicy: {{ .Values.harvester.enableNetworkPolicy }}
+  {{- end }}
   # specify rancher helm chart values deployed into downstream cluster
   # rancherValues: {}
   rkeConfig:
     {{- if ne .Values.cloudprovider "custom" }}
+    {{- if eq .Values.cloudprovider "harvester" }}
+    chartValues:
+      harvester-cloud-provider:
+        cloudConfigPath: /var/lib/rancher/rke2/etc/config-files/cloud-provider-config
+        global:
+          cattle:
+            clusterName: {{ .Values.cluster.name }}
+      {{- if eq .Values.harvester.cni "cilium" }}
+      rke2-cilium:
+        {{- if .Values.harvester.cilium.bgpControlPlaneEnabled }}
+        bgpControlPlane:
+         enabled: true
+        {{- end }}
+        # do not handle services without recognized annotation
+        defaultLBServiceIPAM: none
+        {{- if .Values.harvester.cilium.hubbleEnabled }}
+        hubble:
+         enabled: true
+         relay:
+           enabled: true
+         ui:
+           enabled: true
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    etcd:
+      snapshotRetention: 5
+      snapshotScheduleCron: 0 */5 * * *
+
     machinePools:
     {{- if .Values.nodepools }} {{ range $index, $nodepool := .Values.nodepools }}
-    - controlPlaneRole: {{ $nodepool.controlplane }}
+    - name: {{ $nodepool.name }}
+      {{- if $nodepool.controlplane }}
+      controlPlaneRole: {{ $nodepool.controlplane }}
+      {{- end }}
+      {{- if $nodepool.etcd }}
       etcdRole: {{ $nodepool.etcd }}
+      {{- end }}
+      {{- if $nodepool.worker }}
       workerRole: {{ $nodepool.worker }}
+      {{- end }}
       quantity: {{ $nodepool.quantity }}
-      name: {{ $nodepool.name }}
       machineConfigRef:
         {{- if eq $.Values.cloudprovider "amazonec2" }}
         kind: Amazonec2Config
@@ -49,9 +86,13 @@ spec:
         {{- else if eq $.Values.cloudprovider "azure" }}
         kind: AzureConfig
         {{- end}}
-        name: {{ $nodepool.name }}
+        name: {{ printf "%s-%s" $.Values.cluster.name $nodepool.name }}
+      {{- if $nodepool.paused }}
       paused: {{ $nodepool.paused }}
+      {{- end }}
+      {{- if $nodepool.displayName }}
       displayName: {{ $nodepool.displayName }}
+      {{- end }}
       {{- if $nodepool.rollingUpdate }}
       rollingUpdate:
         maxUnavailable: {{ $nodepool.rollingUpdate.maxUnavailable }}
@@ -77,11 +118,17 @@ spec:
     {{- end }}
     {{- if .Values.nodepool }}
     {{ $nodepool := .Values.nodepool }}
-    - controlPlaneRole: {{ $nodepool.controlplane }}
+    - name: {{ $nodepool.name }}
+      {{- if $nodepool.controlplane }}
+      controlPlaneRole: {{ $nodepool.controlplane }}
+      {{- end }}
+      {{- if $nodepool.etcd }}
       etcdRole: {{ $nodepool.etcd }}
+      {{- end }}
+      {{- if $nodepool.worker }}
       workerRole: {{ $nodepool.worker }}
+      {{- end }}
       quantity: {{ $nodepool.quantity }}
-      name: {{ $nodepool.name }}
       machineConfigRef:
         {{- if eq $.Values.cloudprovider "amazonec2" }}
         kind: Amazonec2Config
@@ -94,9 +141,13 @@ spec:
         {{- else if eq $.Values.cloudprovider "azure" }}
         kind: AzureConfig
         {{- end}}
-        name: {{ $nodepool.name }}
+        name: {{ printf "%s-%s" $.Values.cluster.name $nodepool.name }}
+      {{- if $nodepool.paused }}
       paused: {{ $nodepool.paused }}
+      {{- end }}
+      {{- if $nodepool.displayName }}
       displayName: {{ $nodepool.displayName }}
+      {{- end }}
       {{- if $nodepool.rollingUpdate }}
       rollingUpdate:
         maxUnavailable: {{ $nodepool.rollingUpdate.maxUnavailable }}
@@ -130,7 +181,14 @@ spec:
       # Cluster Domain (default: "cluster.local")
       # cluster-domain: ""
       # CNI Plugin to deploy, one of none, canal, cilium (default: "canal")
+      {{- if eq .Values.cloudprovider "harvester" }}
+      cni: {{ .Values.harvester.cni }}
+      {{- if .Values.harvester.disableKubeProxy }}
+      disable-kube-proxy: true
+      {{- end }}
+      {{- else }}
       cni: calico
+      {{- end }}
       # Do not deploy packaged components and delete any deployed components (valid items: rke2-coredns, rke2-ingress-nginx, rke2-kube-proxy, rke2-metrics-server)
       # disable: false
       # Disable automatic etcd snapshots
@@ -162,8 +220,8 @@ spec:
       # Add additional hostnames or IPv4/IPv6 addresses as Subject Alternative Names on the server TLS cert
       # tls-san: []
 
-    # machineSelectorConfig:
-    # - config:
+    machineSelectorConfig:
+    - config:
         # Node name
         # node-name: ""
         # Disable embedded containerd and use alternative CRI implementation
@@ -179,13 +237,15 @@ spec:
         # Customized flag for kube-proxy process
         # kube-proxy-arg: ""
         # Kernel tuning behavior. If set, error if kernel tunables are different than kubelet defaults. (default: false)
-        # protect-kernel-defaults: false
+        protect-kernel-defaults: false
         # Enable SELinux in containerd (default: false)
         # selinux: true
         # Cloud provider name
-        # cloud-provider-name: ""
+        {{- if eq .Values.cloudprovider "harvester" }}
+        cloud-provider-name: harvester
         # Cloud provider configuration file path
-        # cloud-provider-config: ""
+        cloud-provider-config: 'secret://fleet-default:harvester-config-clusters-{{ .Values.cluster.name }}'
+        {{- end }}
     upgradeStrategy:
       controlPlaneDrainOptions:
         enabled: false
