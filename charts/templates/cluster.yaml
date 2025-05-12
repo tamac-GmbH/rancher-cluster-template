@@ -34,6 +34,14 @@ spec:
     {{- if ne .Values.cloudprovider "custom" }}
     {{- if eq .Values.cloudprovider "harvester" }}
     chartValues:
+      rke2-ingress-nginx:
+        controller:
+          service:
+            enabled: true
+            type: LoadBalancer
+            externalTrafficPolicy: Cluster
+          publishService:
+            enabled: true
       harvester-cloud-provider:
         cloudConfigPath: /var/lib/rancher/rke2/etc/config-files/cloud-provider-config
         global:
